@@ -105,7 +105,7 @@ fails only on corporate hosts and passes on cloud VMs.
 routes the `127.0.0.1` request *through the proxy*, which refuses it.
 
 **Fix.** This repo bypasses the proxy for the readiness check:
-- our post-task sets `use_proxy: false`, and
+- our post-task runs a local `curl --noproxy '*'` on the host, and
 - `alloy_readiness_check_use_proxy: false` disables it for the role's check.
 
 If you still see it, confirm the proxy env on the host and that `no_proxy`

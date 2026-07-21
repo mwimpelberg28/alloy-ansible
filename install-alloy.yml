@@ -106,19 +106,19 @@
     # The role's built-in readiness check only allows ~40s and isn't tunable.
     # Give slow hosts more time here: poll /-/ready until 200 for up to
     # alloy_ready_retries * alloy_ready_delay seconds.
+    # Poll the readiness endpoint with a local curl on the host. --noproxy '*'
+    # guarantees the 127.0.0.1 check never traverses a corporate proxy, whatever
+    # http_proxy/no_proxy are set to. Retries for up to
+    # alloy_ready_retries * alloy_ready_delay seconds.
     - name: Wait for Alloy to report ready
-      ansible.builtin.uri:
-        url: "http://{{ alloy_ready_check_address }}:{{ alloy_ready_check_port }}/-/ready"
-        method: GET
-        status_code: 200
-        # Never route the localhost readiness check through a corporate proxy.
-        use_proxy: false
+      ansible.builtin.command:
+        cmd: >-
+          curl -s --noproxy '*' -o /dev/null -w '%{http_code}'
+          http://{{ alloy_ready_check_address }}:{{ alloy_ready_check_port }}/-/ready
       register: _alloy_ready
       retries: "{{ alloy_ready_retries }}"
       delay: "{{ alloy_ready_delay }}"
-      # default(0) so a connection-refused during startup (no .status) keeps
-      # retrying instead of erroring on an undefined attribute.
-      until: _alloy_ready.status | default(0) == 200
+      until: _alloy_ready.stdout == "200"
       changed_when: false
       when:
         - not ansible_check_mode
