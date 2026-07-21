@@ -6,6 +6,9 @@ vault-password.txt
 # Real inventory (host list) — use inventory.ini.example as the template
 inventory.ini
 
+# Deployment-specific local vars (Fleet Management URL, etc.) — use the example
+group_vars/alloy_nodes/local.yml
+
 # Python virtualenv (control node) — recreate from requirements.txt
 .venv*/
 

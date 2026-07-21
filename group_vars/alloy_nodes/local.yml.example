@@ -1,0 +1,8 @@
+---
+# Copy to local.yml (git-ignored) and set your values:
+#   cp group_vars/alloy_nodes/local.yml.example group_vars/alloy_nodes/local.yml
+#
+# Deployment-specific, non-secret settings. Grafana Cloud Fleet Management
+# endpoint for your stack. Find it under Connections -> Collector ->
+# Fleet Management -> Remote configuration.
+fleet_management_url: "https://fleet-management-prod-XXX.grafana.net"

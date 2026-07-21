@@ -18,9 +18,11 @@ alloy_ready_retries: 30
 alloy_ready_delay: 10
 
 # --- remotecfg (Grafana Cloud Fleet Management) settings -------------------
-# The Fleet Management endpoint for your Grafana Cloud stack. Find it under
-# Connections -> Collector -> Fleet Management -> Remote configuration.
-alloy_remotecfg_url: "https://fleet-management-prod-008.grafana.net"
+# The Fleet Management endpoint for your stack. The real value is kept out of
+# version control: set fleet_management_url in the git-ignored local.yml (see
+# group_vars/alloy_nodes/local.yml.example). Not a secret, just deployment-
+# specific.
+alloy_remotecfg_url: "{{ fleet_management_url }}"
 
 # How often each collector polls for updated configuration.
 alloy_remotecfg_poll_frequency: "60s"

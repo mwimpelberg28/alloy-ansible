@@ -50,8 +50,8 @@ inventory.ini.example                    # template; copy to inventory.ini (git-
 install-alloy.yml                        # the playbook
 group_vars/alloy_nodes/
   vars.yml                               # Alloy config, remotecfg block, env vars
-  vault.yml                              # encrypted credentials (git-ignored)
-  vault.yml.example                      # template for the vault
+  local.yml.example                      # template; copy to local.yml (git-ignored)
+  vault.yml.example                      # template; copy to vault.yml (git-ignored)
 docs/                                    # architecture, configuration, ops, troubleshooting
 ```
 
@@ -69,8 +69,10 @@ cp group_vars/alloy_nodes/vault.yml.example group_vars/alloy_nodes/vault.yml
 # fill in real values, then:
 .venv-ansible216/bin/ansible-vault encrypt group_vars/alloy_nodes/vault.yml
 
-# 3. Point vars.yml at your Fleet Management stack; add hosts to your inventory
-cp inventory.ini.example inventory.ini   # then edit (inventory.ini is git-ignored)
+# 3. Deployment settings: Fleet Management URL and host list (both git-ignored)
+cp group_vars/alloy_nodes/local.yml.example group_vars/alloy_nodes/local.yml
+cp inventory.ini.example inventory.ini
+# then edit both
 
 # 4. Run
 .venv-ansible216/bin/ansible-playbook -i inventory.ini install-alloy.yml

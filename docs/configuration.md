@@ -9,7 +9,7 @@ All tunables live in `group_vars/alloy_nodes/`. Non-secret settings go in
 |----------|---------|---------|
 | `ansible_python_interpreter` | `auto` | Let Ansible discover the system Python per distro (`platform-python` on RHEL, `/usr/bin/python3` on Ubuntu). |
 | `alloy_version` | `latest` | Alloy release to install. Pin to a tag (e.g. `v1.10.0`) for reproducibility. |
-| `alloy_remotecfg_url` | — | Fleet Management endpoint for your stack. |
+| `alloy_remotecfg_url` | `{{ fleet_management_url }}` | Fleet Management endpoint; value comes from `local.yml` (see below). |
 | `alloy_remotecfg_poll_frequency` | `60s` | How often the collector polls for config. |
 | `alloy_remotecfg_username` | vault ref | Fleet Management instance/stack ID. |
 | `alloy_remotecfg_password` | vault ref | Access token (config-plane). |
@@ -70,6 +70,25 @@ remotecfg {
 - `attributes` are how you target collectors when assigning pipelines centrally.
   `platform` is filled from the host's distribution automatically; add your own
   (region, role, team, …) as needed.
+
+## Local settings (`local.yml`)
+
+Deployment-specific, non-secret values live in a git-ignored `local.yml` so the
+committed `vars.yml` stays generic:
+
+```yaml
+fleet_management_url: "https://fleet-management-prod-NNN.grafana.net"
+```
+
+`vars.yml` references it as `alloy_remotecfg_url: "{{ fleet_management_url }}"`.
+Create it from the template:
+
+```bash
+cp group_vars/alloy_nodes/local.yml.example group_vars/alloy_nodes/local.yml
+```
+
+Any file in `group_vars/alloy_nodes/` is loaded automatically, so `local.yml`'s
+`fleet_management_url` is picked up with no extra flags.
 
 ## The vault (`vault.yml`)
 

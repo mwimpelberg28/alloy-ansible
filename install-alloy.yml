@@ -75,17 +75,19 @@
           This playbook targets RHEL and Ubuntu, but detected
           os_family={{ ansible_facts['os_family'] }}.
 
-    - name: Fail early if remotecfg credentials are not configured
+    - name: Fail early if remotecfg settings are not configured
       ansible.builtin.assert:
         that:
+          - fleet_management_url is defined
+          - fleet_management_url | length > 0
+          - "'XXX' not in fleet_management_url"
           - alloy_remotecfg_username is defined
           - alloy_remotecfg_username | length > 0
           - alloy_remotecfg_password is defined
           - alloy_remotecfg_password | length > 0
-          - "'XXX' not in alloy_remotecfg_url"
         fail_msg: >-
-          Set alloy_remotecfg_url and the vaulted credentials before running.
-          See group_vars/alloy_nodes/vault.yml.example.
+          Set fleet_management_url (see group_vars/alloy_nodes/local.yml.example)
+          and the vaulted credentials (see vault.yml.example) before running.
 
   roles:
     - role: grafana.grafana.alloy
