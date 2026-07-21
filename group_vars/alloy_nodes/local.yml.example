@@ -6,3 +6,12 @@
 # endpoint for your stack. Find it under Connections -> Collector ->
 # Fleet Management -> Remote configuration.
 fleet_management_url: "https://fleet-management-prod-XXX.grafana.net"
+
+# remotecfg attributes used to target collectors in Fleet Management. Add as
+# many key/value pairs as you need — all are rendered into the remotecfg block.
+# Values may use facts, e.g. "{{ ansible_facts['distribution'] | lower }}".
+alloy_remotecfg_attributes:
+  platform: "{{ ansible_facts['distribution'] | lower }}"
+  env: "production"
+  # region: "us-east-1"
+  # team: "corporateit"

@@ -64,7 +64,8 @@ alloy_config: |
     poll_frequency = "{{ alloy_remotecfg_poll_frequency }}"
 
     attributes = {
-      "platform" = "{{ ansible_facts['distribution'] | lower }}",
-      "env"      = "production",
+  {% for key, value in (alloy_remotecfg_attributes | default({})).items() %}
+      "{{ key }}" = "{{ value }}",
+  {% endfor %}
     }
   }

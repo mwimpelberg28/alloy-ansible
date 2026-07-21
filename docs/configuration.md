@@ -68,8 +68,9 @@ remotecfg {
 - `id` uses `constants.hostname` so each collector is identifiable in the Fleet
   Management UI.
 - `attributes` are how you target collectors when assigning pipelines centrally.
-  `platform` is filled from the host's distribution automatically; add your own
-  (region, role, team, …) as needed.
+  They are **not** hardcoded — `vars.yml` renders them from the
+  `alloy_remotecfg_attributes` dict in `local.yml`, so add as many key/value
+  pairs (region, role, team, …) as you need.
 
 ## Local settings (`local.yml`)
 
@@ -78,9 +79,21 @@ committed `vars.yml` stays generic:
 
 ```yaml
 fleet_management_url: "https://fleet-management-prod-NNN.grafana.net"
+
+# Any number of remotecfg attributes — all rendered into the config.
+alloy_remotecfg_attributes:
+  platform: "{{ ansible_facts['distribution'] | lower }}"
+  env: "production"
+  region: "us-east-1"
+  team: "corporateit"
 ```
 
-`vars.yml` references it as `alloy_remotecfg_url: "{{ fleet_management_url }}"`.
+- `fleet_management_url` — referenced by `vars.yml` as
+  `alloy_remotecfg_url: "{{ fleet_management_url }}"`.
+- `alloy_remotecfg_attributes` — a dict of key/value pairs used to target
+  collectors in Fleet Management. Add as many as you need; `vars.yml` loops over
+  them to build the `attributes { }` block. Values may reference facts.
+
 Create it from the template:
 
 ```bash
