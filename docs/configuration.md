@@ -100,6 +100,13 @@ are git-ignored — only the encrypted `vault.yml` is safe to commit.
 
 ## Inventory
 
+`inventory.ini` is git-ignored so real host lists never get committed. Start
+from the template:
+
+```bash
+cp inventory.ini.example inventory.ini
+```
+
 `ansible_user` is per host because RHEL AMIs log in as `ec2-user` and Ubuntu
 AMIs as `ubuntu`:
 

@@ -46,7 +46,7 @@ Ansible Vault, a distro-aware Python interpreter, low-memory handling, and the
 requirements.txt                         # control-node ansible-core pin (<2.17)
 requirements.yml                         # grafana.grafana collection + deps
 ansible.cfg                              # inventory, become, vault password file
-inventory.ini                            # your RHEL/Ubuntu hosts
+inventory.ini.example                    # template; copy to inventory.ini (git-ignored)
 install-alloy.yml                        # the playbook
 group_vars/alloy_nodes/
   vars.yml                               # Alloy config, remotecfg block, env vars
@@ -69,7 +69,8 @@ cp group_vars/alloy_nodes/vault.yml.example group_vars/alloy_nodes/vault.yml
 # fill in real values, then:
 .venv-ansible216/bin/ansible-vault encrypt group_vars/alloy_nodes/vault.yml
 
-# 3. Point vars.yml at your Fleet Management stack, add hosts to inventory.ini
+# 3. Point vars.yml at your Fleet Management stack; add hosts to your inventory
+cp inventory.ini.example inventory.ini   # then edit (inventory.ini is git-ignored)
 
 # 4. Run
 .venv-ansible216/bin/ansible-playbook -i inventory.ini install-alloy.yml

@@ -3,6 +3,9 @@ group_vars/alloy_nodes/vault.yml
 vault-password.txt
 .vault_pass*
 
+# Real inventory (host list) — use inventory.ini.example as the template
+inventory.ini
+
 # Python virtualenv (control node) — recreate from requirements.txt
 .venv*/
 
