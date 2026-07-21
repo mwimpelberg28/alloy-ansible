@@ -111,10 +111,14 @@
         url: "http://{{ alloy_ready_check_address }}:{{ alloy_ready_check_port }}/-/ready"
         method: GET
         status_code: 200
+        # Never route the localhost readiness check through a corporate proxy.
+        use_proxy: false
       register: _alloy_ready
       retries: "{{ alloy_ready_retries }}"
       delay: "{{ alloy_ready_delay }}"
-      until: _alloy_ready.status == 200
+      # default(0) so a connection-refused during startup (no .status) keeps
+      # retrying instead of erroring on an undefined attribute.
+      until: _alloy_ready.status | default(0) == 200
       changed_when: false
       when:
         - not ansible_check_mode

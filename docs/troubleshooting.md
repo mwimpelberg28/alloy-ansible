@@ -94,6 +94,27 @@ Ubuntu image.
 apt-based task. If you removed that task, restore it or install the package
 manually.
 
+## Readiness check fails behind a corporate proxy
+
+**Symptom.** The "Wait for Alloy to report ready" task (or the role's own
+readiness check) fails/times out on some hosts even though Alloy is running and
+`curl http://127.0.0.1:12345/-/ready` returns `200` on the host itself. Often it
+fails only on corporate hosts and passes on cloud VMs.
+
+**Cause.** The host has `http_proxy`/`https_proxy` set, and the `uri` module
+routes the `127.0.0.1` request *through the proxy*, which refuses it.
+
+**Fix.** This repo bypasses the proxy for the readiness check:
+- our post-task sets `use_proxy: false`, and
+- `alloy_readiness_check_use_proxy: false` disables it for the role's check.
+
+If you still see it, confirm the proxy env on the host and that `no_proxy`
+includes `127.0.0.1,localhost`:
+
+```bash
+ssh <user>@<host> 'env | grep -i proxy; systemctl show alloy -p Environment'
+```
+
 ## Host unreachable
 
 **Symptom:** `ssh: connect to host X port 22: No route to host`.

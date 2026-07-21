@@ -17,6 +17,10 @@ alloy_ready_check_port: 12345
 alloy_ready_retries: 30
 alloy_ready_delay: 10
 
+# The upstream role's own readiness check defaults to honoring the proxy, which
+# breaks a localhost check on hosts behind a corporate proxy. Bypass it.
+alloy_readiness_check_use_proxy: false
+
 # --- remotecfg (Grafana Cloud Fleet Management) settings -------------------
 # The Fleet Management endpoint for your stack. The real value is kept out of
 # version control: set fleet_management_url in the git-ignored local.yml (see
