@@ -1,0 +1,16 @@
+# Ansible Vault secrets — never commit
+group_vars/alloy_nodes/vault.yml
+vault-password.txt
+.vault_pass*
+
+# Python virtualenv (control node) — recreate from requirements.txt
+.venv*/
+
+# Installed collections
+collections/
+
+# Claude Code local settings
+.claude/
+
+# Ansible retry files
+*.retry

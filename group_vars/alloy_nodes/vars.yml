@@ -1,0 +1,59 @@
+---
+# Let Ansible discover the right interpreter per distro: /usr/libexec/platform-
+# python on RHEL (where the dnf bindings live) and /usr/bin/python3 on Ubuntu.
+# Both RHEL 8 and Ubuntu 18.04 ship Python 3.6, so the control node must run
+# ansible-core 2.16.x (the last release supporting Python 3.6 managed nodes).
+ansible_python_interpreter: auto
+
+# Alloy version to install ("latest" or a pinned tag such as "v1.10.0").
+alloy_version: latest
+
+# --- remotecfg (Grafana Cloud Fleet Management) settings -------------------
+# The Fleet Management endpoint for your Grafana Cloud stack. Find it under
+# Connections -> Collector -> Fleet Management -> Remote configuration.
+alloy_remotecfg_url: "https://fleet-management-prod-008.grafana.net"
+
+# How often each collector polls for updated configuration.
+alloy_remotecfg_poll_frequency: "60s"
+
+# Basic-auth username is your Fleet Management instance/stack ID (numeric).
+# The password is an Access Policy token with fleet-management:read scope.
+# Keep the real token in the vault file (group_vars/alloy_nodes/vault.yml),
+# NOT here. These reference the vaulted values.
+alloy_remotecfg_username: "{{ vault_alloy_remotecfg_username }}"
+alloy_remotecfg_password: "{{ vault_alloy_remotecfg_password }}"
+
+# --- Alloy systemd env file ------------------------------------------------
+# Written by the role to /etc/default/alloy (Ubuntu) and /etc/sysconfig/alloy
+# (RHEL) and loaded by the alloy.service unit as environment variables. The
+# pipeline delivered by Fleet Management reads GCLOUD_RW_API_KEY via sys.env()
+# for its remote_write (metrics/logs) credentials.
+alloy_env_file_vars:
+  GCLOUD_RW_API_KEY: "{{ vault_alloy_remotecfg_password }}"
+
+# --- Rendered Alloy configuration passed to the role -----------------------
+# The remotecfg block bootstraps the collector: it registers with Fleet
+# Management using its hostname as the identifier, then pulls the rest of its
+# pipeline (scrapes, remote_write, etc.) from the server.
+alloy_config: |
+  logging {
+    level  = "info"
+    format = "logfmt"
+  }
+
+  remotecfg {
+    url = "{{ alloy_remotecfg_url }}"
+
+    basic_auth {
+      username = "{{ alloy_remotecfg_username }}"
+      password = "{{ alloy_remotecfg_password }}"
+    }
+
+    id             = constants.hostname
+    poll_frequency = "{{ alloy_remotecfg_poll_frequency }}"
+
+    attributes = {
+      "platform" = "{{ ansible_facts['distribution'] | lower }}",
+      "env"      = "production",
+    }
+  }

@@ -1,0 +1,13 @@
+# Control-node Python requirements.
+#
+# ansible-core is pinned below 2.17 on purpose. The upstream
+# grafana.grafana.alloy role installs Alloy with the dnf module, and on
+# RHEL 8 the dnf Python bindings exist ONLY for the system Python 3.6.
+# ansible-core 2.17+ dropped support for running modules on Python 3.6, so it
+# cannot drive RHEL 8 targets. 2.16.x supports Python 3.6-3.12 on managed
+# nodes, covering both RHEL 8 (3.6) and RHEL 9 (3.9) in a single run.
+#
+# Install into a venv:
+#   python3 -m venv .venv-ansible216
+#   .venv-ansible216/bin/pip install -r requirements.txt
+ansible-core>=2.16,<2.17

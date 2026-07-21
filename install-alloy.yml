@@ -1,0 +1,102 @@
+---
+- name: Install and configure Grafana Alloy with remotecfg on RHEL and Ubuntu
+  hosts: alloy_nodes
+  become: true
+
+  pre_tasks:
+    # The role installs Alloy with the apt module on Debian/Ubuntu, which needs
+    # the python3-apt bindings for whatever interpreter Ansible uses. Ensure
+    # them with `raw` (no Python deps) before any apt-based task runs. Harmless
+    # no-op if already present.
+    - name: Ensure python3-apt is present (Debian/Ubuntu)
+      ansible.builtin.raw: |
+        set -e
+        if ! dpkg -s python3-apt >/dev/null 2>&1; then
+          apt-get update -qq && apt-get install -y python3-apt
+        fi
+      when: ansible_facts['os_family'] == 'Debian'
+      changed_when: false
+
+    # The ansible.builtin.dnf module loads full repo metadata into memory and
+    # peaks around ~500 MiB. On <1 GiB instances with no swap the kernel OOM-
+    # kills it (the module returns rc 137 with empty output). Provision a small
+    # swap file first so the install has headroom. Applies to any low-memory
+    # host regardless of distro.
+    - name: Ensure swap on low-memory hosts to avoid install OOM (rc 137)
+      when:
+        - ansible_facts['memtotal_mb'] | int < 2048
+        - ansible_facts['swaptotal_mb'] | int == 0
+      block:
+        - name: Create /swapfile (1 GiB)
+          ansible.builtin.command:
+            cmd: dd if=/dev/zero of=/swapfile bs=1M count=1024
+            creates: /swapfile
+
+        - name: Secure /swapfile
+          ansible.builtin.file:
+            path: /swapfile
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: Format /swapfile as swap
+          ansible.builtin.shell: |
+            set -o pipefail
+            if ! file /swapfile | grep -q "swap file"; then
+              mkswap /swapfile
+            fi
+          args:
+            executable: /bin/bash
+          register: _mkswap
+          changed_when: "'Setting up swapspace' in _mkswap.stdout"
+
+        - name: Persist /swapfile in fstab
+          ansible.posix.mount:
+            path: none
+            src: /swapfile
+            fstype: swap
+            opts: sw
+            state: present
+
+        - name: Enable swap now
+          ansible.builtin.command:
+            cmd: swapon /swapfile
+          register: _swapon
+          changed_when: _swapon.rc == 0
+          failed_when:
+            - _swapon.rc != 0
+            - "'already active' not in (_swapon.stderr | default(''))"
+
+    - name: Ensure this is a supported OS family (RedHat or Debian)
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['os_family'] in ['RedHat', 'Debian']
+        fail_msg: >-
+          This playbook targets RHEL and Ubuntu, but detected
+          os_family={{ ansible_facts['os_family'] }}.
+
+    - name: Fail early if remotecfg credentials are not configured
+      ansible.builtin.assert:
+        that:
+          - alloy_remotecfg_username is defined
+          - alloy_remotecfg_username | length > 0
+          - alloy_remotecfg_password is defined
+          - alloy_remotecfg_password | length > 0
+          - "'XXX' not in alloy_remotecfg_url"
+        fail_msg: >-
+          Set alloy_remotecfg_url and the vaulted credentials before running.
+          See group_vars/alloy_nodes/vault.yml.example.
+
+  roles:
+    - role: grafana.grafana.alloy
+
+  post_tasks:
+    # The role writes the env file 0644, but it now holds GCLOUD_RW_API_KEY.
+    # Tighten it to 0600 — systemd reads EnvironmentFile as root when starting
+    # the unit, so the alloy service is unaffected.
+    - name: Restrict the Alloy env file (contains GCLOUD_RW_API_KEY)
+      ansible.builtin.file:
+        path: "{{ '/etc/sysconfig/alloy' if ansible_facts['os_family'] == 'RedHat' else '/etc/default/alloy' }}"
+        owner: root
+        group: root
+        mode: "0600"

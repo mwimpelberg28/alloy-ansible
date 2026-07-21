@@ -1,0 +1,12 @@
+---
+# Copy this file to vault.yml and encrypt it:
+#   cp group_vars/alloy_nodes/vault.yml.example group_vars/alloy_nodes/vault.yml
+#   ansible-vault encrypt group_vars/alloy_nodes/vault.yml
+#
+# Edit later with: ansible-vault edit group_vars/alloy_nodes/vault.yml
+
+# Fleet Management instance/stack ID (the numeric username shown in the UI).
+vault_alloy_remotecfg_username: "123456"
+
+# Access Policy token with the fleet-management:read scope (starts with "glc_").
+vault_alloy_remotecfg_password: "glc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
