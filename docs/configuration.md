@@ -15,6 +15,18 @@ All tunables live in `group_vars/alloy_nodes/`. Non-secret settings go in
 | `alloy_remotecfg_password` | vault ref | Access token (config-plane). |
 | `alloy_env_file_vars` | see below | Extra env vars written to the systemd env file. |
 | `alloy_config` | see below | The rendered `config.alloy` contents. |
+| `alloy_ready_check_address` | `127.0.0.1` | Address polled for the post-install readiness check. |
+| `alloy_ready_check_port` | `12345` | Port for the readiness check (`/-/ready`). |
+| `alloy_ready_retries` | `30` | Readiness poll attempts. |
+| `alloy_ready_delay` | `10` | Seconds between readiness attempts. |
+
+### Readiness check
+
+After install, the playbook polls `http://<addr>:<port>/-/ready` until it
+returns `200`, for up to `alloy_ready_retries * alloy_ready_delay` seconds
+(default 300s / 5 min). The upstream role has its own ~40s check that isn't
+tunable; this post-install gate extends it for slow hosts or large pipelines.
+Bump `alloy_ready_retries` / `alloy_ready_delay` if a host needs longer.
 
 ### `alloy_env_file_vars`
 

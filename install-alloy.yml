@@ -100,3 +100,20 @@
         owner: root
         group: root
         mode: "0600"
+
+    # The role's built-in readiness check only allows ~40s and isn't tunable.
+    # Give slow hosts more time here: poll /-/ready until 200 for up to
+    # alloy_ready_retries * alloy_ready_delay seconds.
+    - name: Wait for Alloy to report ready
+      ansible.builtin.uri:
+        url: "http://{{ alloy_ready_check_address }}:{{ alloy_ready_check_port }}/-/ready"
+        method: GET
+        status_code: 200
+      register: _alloy_ready
+      retries: "{{ alloy_ready_retries }}"
+      delay: "{{ alloy_ready_delay }}"
+      until: _alloy_ready.status == 200
+      changed_when: false
+      when:
+        - not ansible_check_mode
+        - ansible_facts['os_family'] in ['RedHat', 'Debian']

@@ -8,6 +8,15 @@ ansible_python_interpreter: auto
 # Alloy version to install ("latest" or a pinned tag such as "v1.10.0").
 alloy_version: latest
 
+# --- Readiness check -------------------------------------------------------
+# After install, the playbook polls Alloy's /-/ready endpoint until it returns
+# 200. Total wait = alloy_ready_retries * alloy_ready_delay seconds. Increase
+# these for slow hosts or where remotecfg pulls a large pipeline on startup.
+alloy_ready_check_address: "127.0.0.1"
+alloy_ready_check_port: 12345
+alloy_ready_retries: 30
+alloy_ready_delay: 10
+
 # --- remotecfg (Grafana Cloud Fleet Management) settings -------------------
 # The Fleet Management endpoint for your Grafana Cloud stack. Find it under
 # Connections -> Collector -> Fleet Management -> Remote configuration.
