@@ -17,56 +17,6 @@
       when: ansible_facts['os_family'] == 'Debian'
       changed_when: false
 
-    # The ansible.builtin.dnf module loads full repo metadata into memory and
-    # peaks around ~500 MiB. On <1 GiB instances with no swap the kernel OOM-
-    # kills it (the module returns rc 137 with empty output). Provision a small
-    # swap file first so the install has headroom. Applies to any low-memory
-    # host regardless of distro.
-    - name: Ensure swap on low-memory hosts to avoid install OOM (rc 137)
-      when:
-        - ansible_facts['memtotal_mb'] | int < 2048
-        - ansible_facts['swaptotal_mb'] | int == 0
-      block:
-        - name: Create /swapfile (1 GiB)
-          ansible.builtin.command:
-            cmd: dd if=/dev/zero of=/swapfile bs=1M count=1024
-            creates: /swapfile
-
-        - name: Secure /swapfile
-          ansible.builtin.file:
-            path: /swapfile
-            owner: root
-            group: root
-            mode: "0600"
-
-        - name: Format /swapfile as swap
-          ansible.builtin.shell: |
-            set -o pipefail
-            if ! file /swapfile | grep -q "swap file"; then
-              mkswap /swapfile
-            fi
-          args:
-            executable: /bin/bash
-          register: _mkswap
-          changed_when: "'Setting up swapspace' in _mkswap.stdout"
-
-        - name: Persist /swapfile in fstab
-          ansible.posix.mount:
-            path: none
-            src: /swapfile
-            fstype: swap
-            opts: sw
-            state: present
-
-        - name: Enable swap now
-          ansible.builtin.command:
-            cmd: swapon /swapfile
-          register: _swapon
-          changed_when: _swapon.rc == 0
-          failed_when:
-            - _swapon.rc != 0
-            - "'already active' not in (_swapon.stderr | default(''))"
-
     - name: Ensure this is a supported OS family (RedHat or Debian)
       ansible.builtin.assert:
         that:
