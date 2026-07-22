@@ -12,9 +12,6 @@ group_vars/alloy_nodes/local.yml
 # Python virtualenv (control node) — recreate from requirements.txt
 .venv*/
 
-# Installed collections
-collections/
-
 # Claude Code local settings
 .claude/
 
