@@ -25,6 +25,51 @@
           This playbook targets RHEL and Ubuntu, but detected
           os_family={{ ansible_facts['os_family'] }}.
 
+    # Install Alloy from an internal yum repo when one is configured, instead of
+    # letting the role pull the RPM from github.com (which an air-gapped host
+    # can't reach). This has to run before the role: the role's own install task
+    # guards on `alloy --version` output, so once the requested version is
+    # already present it skips the download entirely. Everything else the role
+    # does — config, env file, systemd, service — is unaffected.
+    - name: Install Alloy from the internal yum repo (RedHat)
+      when:
+        - ansible_facts['os_family'] == 'RedHat'
+        - alloy_yum_baseurl | default('') | length > 0
+      block:
+        - name: Assert alloy_version is pinned when installing from a repo
+          ansible.builtin.assert:
+            that:
+              - alloy_version != 'latest'
+            fail_msg: >-
+              alloy_yum_baseurl is set, so alloy_version must be a concrete
+              version (e.g. "1.18.0") — "latest" can't be resolved against a
+              repo and would make the role query api.github.com.
+
+        - name: Import the internal repo signing key
+          ansible.builtin.rpm_key:
+            key: "{{ alloy_yum_gpgkey }}"
+            state: present
+          when: alloy_yum_gpgcheck | bool
+
+        - name: Configure the internal Alloy yum repo
+          ansible.builtin.yum_repository:
+            name: "{{ alloy_yum_repo_name }}"
+            description: Internal Grafana Alloy mirror
+            baseurl: "{{ alloy_yum_baseurl }}"
+            enabled: true
+            gpgcheck: "{{ alloy_yum_gpgcheck | bool }}"
+            gpgkey: "{{ alloy_yum_gpgkey if alloy_yum_gpgcheck | bool else omit }}"
+            file: "{{ alloy_yum_repo_name }}"
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Install Alloy {{ alloy_version }} from the internal repo
+          ansible.builtin.dnf:
+            name: "alloy-{{ alloy_version }}"
+            state: present
+          register: _alloy_pkg
+
     - name: Fail early if remotecfg settings are not configured
       ansible.builtin.assert:
         that:
@@ -52,6 +97,19 @@
         owner: root
         group: root
         mode: "0600"
+
+    # When the pre_task above upgraded the RPM but alloy_config was unchanged,
+    # no role handler fires and the old binary keeps running. Restart explicitly
+    # so the new version is actually live. (On a first install this is a
+    # redundant restart of a service the role just started — harmless.)
+    - name: Restart Alloy if the package changed
+      ansible.builtin.systemd:
+        name: alloy.service
+        state: restarted
+      when:
+        - not ansible_check_mode
+        - _alloy_pkg is defined
+        - _alloy_pkg.changed
 
     # The role's built-in readiness check only allows ~40s and isn't tunable.
     # Give slow hosts more time here: poll /-/ready until 200 for up to

@@ -5,8 +5,25 @@
 # ansible-core 2.16.x (the last release supporting Python 3.6 managed nodes).
 ansible_python_interpreter: auto
 
-# Alloy version to install ("latest" or a pinned tag such as "v1.10.0").
-alloy_version: latest
+# --- Package source --------------------------------------------------------
+# Alloy version to install. Use the bare version with NO leading "v": the role
+# builds its download URL as .../download/v{{ alloy_version }}/ and compares
+# this string against `alloy --version` output, so "v1.18.0" breaks both.
+# "latest" makes the role query api.github.com from the control node, which
+# fails on an air-gapped control node — pin it.
+alloy_version: "1.18.0"
+
+# When alloy_yum_baseurl is set (in the git-ignored local.yml), RHEL hosts
+# install Alloy from that internal repo instead of downloading the RPM from
+# GitHub. Leave it unset to keep the role's direct-URL install.
+#
+# Grafana ships the GitHub release RPMs unsigned — `rpm -qpi` reports
+# "Signature: (none)", which is also why the upstream role hardcodes
+# disable_gpg_check: true. So gpgcheck stays off unless you re-sign the RPM
+# with your own key and publish that pubkey as alloy_yum_gpgkey.
+alloy_yum_repo_name: "local-alloy"
+alloy_yum_gpgcheck: false
+alloy_yum_gpgkey: ""
 
 # --- Readiness check -------------------------------------------------------
 # After install, the playbook polls Alloy's /-/ready endpoint until it returns

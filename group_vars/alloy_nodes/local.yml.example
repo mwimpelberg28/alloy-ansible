@@ -7,6 +7,16 @@
 # Fleet Management -> Remote configuration.
 fleet_management_url: "https://fleet-management-prod-XXX.grafana.net"
 
+# Optional: internal yum repo mirroring the Alloy RPM. When set, RHEL hosts
+# install Alloy from here instead of reaching out to github.com — required for
+# air-gapped runs. Leave commented out to keep the role's direct-URL install.
+# The repo must be a createrepo_c tree served over HTTP, e.g. built with:
+#   sudo mkdir -p /var/www/html/alloy/Packages
+#   sudo curl -sSLO --output-dir /var/www/html/alloy/Packages \
+#     https://github.com/grafana/alloy/releases/download/v1.18.0/alloy-1.18.0-1.amd64.rpm
+#   sudo createrepo_c /var/www/html/alloy && sudo systemctl enable --now httpd
+# alloy_yum_baseurl: "http://repo.internal.example.com/alloy"
+
 # remotecfg attributes used to target collectors in Fleet Management. Add as
 # many key/value pairs as you need — all are rendered into the remotecfg block.
 # Values may use facts, e.g. "{{ ansible_facts['distribution'] | lower }}".

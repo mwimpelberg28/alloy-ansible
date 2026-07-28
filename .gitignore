@@ -17,3 +17,6 @@ group_vars/alloy_nodes/local.yml
 
 # Ansible retry files
 *.retry
+
+# macOS Finder metadata
+.DS_Store
