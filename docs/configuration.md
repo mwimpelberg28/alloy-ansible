@@ -15,7 +15,7 @@ All tunables live in `group_vars/alloy_nodes/`. Non-secret settings go in
 | `alloy_remotecfg_url` | `{{ fleet_management_url }}` | Fleet Management endpoint; value comes from `local.yml` (see below). |
 | `alloy_remotecfg_poll_frequency` | `60s` | How often the collector polls for config. |
 | `alloy_remotecfg_username` | vault ref | Fleet Management instance/stack ID. |
-| `alloy_remotecfg_password` | vault ref | Access token (config-plane). |
+| `alloy_remotecfg_password` | vault ref | Access token. Delivered via the env file, not templated into `config.alloy`. |
 | `alloy_env_file_vars` | see below | Extra env vars written to the systemd env file. |
 | `alloy_config` | see below | The rendered `config.alloy` contents. |
 | `alloy_ready_check_address` | `127.0.0.1` | Address polled for the post-install readiness check. |
@@ -90,13 +90,24 @@ Merged by the role into the systemd env file and loaded as process environment:
 
 ```yaml
 alloy_env_file_vars:
-  GCLOUD_RW_API_KEY: "{{ vault_alloy_remotecfg_password }}"
+  GCLOUD_RW_API_KEY: "{{ alloy_remotecfg_password }}"
 ```
 
-`GCLOUD_RW_API_KEY` is the **data-plane** credential the Fleet-Management-
-delivered pipeline uses for remote_write. It is referenced inside delivered
-configs as `sys.env("GCLOUD_RW_API_KEY")`. The playbook locks this file to
-`0600` in a `post_task`.
+This is the **only place the token lands on disk**, and the playbook locks the
+file to `0600` in a `post_task`. `GCLOUD_RW_API_KEY` is consumed by both auth
+paths as `sys.env("GCLOUD_RW_API_KEY")`:
+
+- the **config-plane** `remotecfg` `basic_auth` password in `config.alloy`, and
+- the **data-plane** remote_write credential inside the pipeline Fleet
+  Management delivers at runtime.
+
+Because the config-plane password is resolved at runtime rather than templated
+in, rotating the token only rewrites the env file — `config.alloy` is unchanged
+and stays credential-free.
+
+If your remote_write token differs from the `fleet-management:read` token, add a
+second entry here (e.g. `GCLOUD_FM_API_KEY`) and point the `remotecfg`
+`sys.env()` call at it.
 
 ### The `remotecfg` block
 
@@ -108,7 +119,7 @@ remotecfg {
 
   basic_auth {
     username = "<instance id>"
-    password = "<access token>"
+    password = sys.env("GCLOUD_RW_API_KEY")   // from the systemd env file
   }
 
   id             = constants.hostname   // how the host appears in Fleet Mgmt
@@ -175,10 +186,10 @@ vault_alloy_remotecfg_password: "glc_xxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
 - `vault_alloy_remotecfg_username` — Fleet Management instance/stack ID.
-- `vault_alloy_remotecfg_password` — access token. Used for both the config-plane
-  `basic_auth` and (via `alloy_env_file_vars`) the data-plane
-  `GCLOUD_RW_API_KEY`. If your setup needs a *separate* write token, add a second
-  vault var and point `GCLOUD_RW_API_KEY` at it.
+- `vault_alloy_remotecfg_password` — access token. Reaches the host only through
+  `alloy_env_file_vars` as `GCLOUD_RW_API_KEY`, and serves both the config-plane
+  `basic_auth` and the data-plane remote_write. If your setup needs a *separate*
+  write token, add a second vault var and a second env-file entry.
 
 Create and encrypt it:
 

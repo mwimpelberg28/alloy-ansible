@@ -70,20 +70,42 @@ level=error msg="final error sending batch, no retries left, dropping data"
 
 **Cause.** This is the **data-plane**, not remotecfg. The pipeline delivered by
 Fleet Management reads its write credential from `sys.env("GCLOUD_RW_API_KEY")`.
-If that env var is missing or the token lacks metrics/logs **write** scope, every
-remote_write is rejected with `401`. remotecfg itself is fine — it already pulled
-the config.
+If the token lacks metrics/logs **write** scope, every remote_write is rejected
+with `401`. remotecfg itself is fine — it already pulled the config.
 
 **Fix.**
 1. Ensure `alloy_env_file_vars.GCLOUD_RW_API_KEY` is set in `vars.yml` (it is by
    default, sourced from the vault).
 2. Ensure the token has the required write scopes (not just
    `fleet-management:read`). If your write token differs from the config-plane
-   token, add a separate vault var and point `GCLOUD_RW_API_KEY` at it.
+   token, add a separate vault var plus a second env-file entry, and point the
+   `remotecfg` `sys.env()` call at that one.
 3. Re-run the playbook and confirm on the host:
    ```bash
    sudo grep GCLOUD_RW_API_KEY /etc/default/alloy   # or /etc/sysconfig/alloy
    ```
+
+## `401` on remotecfg (config-plane)
+
+**Symptom.** No pipeline is ever delivered; the log shows remotecfg failing to
+fetch, and `/etc/alloy/config.alloy` looks correct.
+
+**Cause.** The `remotecfg` `basic_auth` password is `sys.env("GCLOUD_RW_API_KEY")`,
+so an **empty or absent env var** means Alloy authenticates with an empty
+password. `sys.env()` returns `""` for an unset variable rather than erroring, so
+the config loads cleanly and the only symptom is the auth failure.
+
+**Fix.** Confirm the env file exists, is listed as the unit's `EnvironmentFile`,
+and actually carries the key:
+
+```bash
+sudo grep GCLOUD_RW_API_KEY /etc/default/alloy   # or /etc/sysconfig/alloy
+systemctl show alloy -p EnvironmentFiles
+sudo systemctl show alloy -p Environment | grep -c GCLOUD_RW_API_KEY
+```
+
+A missing entry means the vault var was empty at render time. The playbook's
+`pre_tasks` assertion catches that on the next run.
 
 ## `python3-apt` missing (Ubuntu)
 

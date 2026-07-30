@@ -52,21 +52,34 @@ alloy_remotecfg_poll_frequency: "60s"
 # The password is an Access Policy token with fleet-management:read scope.
 # Keep the real token in the vault file (group_vars/alloy_nodes/vault.yml),
 # NOT here. These reference the vaulted values.
+#
+# The token is never rendered into config.alloy — it reaches Alloy through the
+# systemd env file below and is read back with sys.env(). See alloy_config.
 alloy_remotecfg_username: "{{ vault_alloy_remotecfg_username }}"
 alloy_remotecfg_password: "{{ vault_alloy_remotecfg_password }}"
 
 # --- Alloy systemd env file ------------------------------------------------
 # Written by the role to /etc/default/alloy (Ubuntu) and /etc/sysconfig/alloy
-# (RHEL) and loaded by the alloy.service unit as environment variables. The
-# pipeline delivered by Fleet Management reads GCLOUD_RW_API_KEY via sys.env()
-# for its remote_write (metrics/logs) credentials.
+# (RHEL) and loaded by the alloy.service unit as environment variables. This is
+# the single place the token lands on disk, and a post_task locks the file to
+# 0600 (config.alloy stays 0644 but no longer holds a secret).
+#
+# GCLOUD_RW_API_KEY serves both auth paths:
+#   - config-plane: the remotecfg basic_auth password below
+#   - data-plane:   the Fleet-Management-delivered pipeline's remote_write creds
+# If your write token differs from the fleet-management:read token, add a second
+# entry here (e.g. GCLOUD_FM_API_KEY) and point remotecfg's sys.env() at it.
 alloy_env_file_vars:
-  GCLOUD_RW_API_KEY: "{{ vault_alloy_remotecfg_password }}"
+  GCLOUD_RW_API_KEY: "{{ alloy_remotecfg_password }}"
 
 # --- Rendered Alloy configuration passed to the role -----------------------
 # The remotecfg block bootstraps the collector: it registers with Fleet
 # Management using its hostname as the identifier, then pulls the rest of its
 # pipeline (scrapes, remote_write, etc.) from the server.
+#
+# The basic_auth password is read at runtime from the systemd env file with
+# sys.env() rather than templated in, so no credential is written to
+# /etc/alloy/config.alloy. Rotating the token is then an env-file change only.
 alloy_config: |
   logging {
     level  = "info"
@@ -78,7 +91,7 @@ alloy_config: |
 
     basic_auth {
       username = "{{ alloy_remotecfg_username }}"
-      password = "{{ alloy_remotecfg_password }}"
+      password = sys.env("GCLOUD_RW_API_KEY")
     }
 
     id             = constants.hostname

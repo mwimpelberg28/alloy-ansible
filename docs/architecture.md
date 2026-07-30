@@ -38,13 +38,17 @@ source of trouble:
 
 1. **Config-plane (`remotecfg` basic_auth).** Alloy authenticates to Fleet
    Management to *pull its configuration*. Username = Fleet Management
-   instance/stack ID, password = an access token. Configured directly in the
-   `remotecfg` block in `config.alloy`.
+   instance/stack ID, password = an access token. The username is templated into
+   the `remotecfg` block in `config.alloy`; the password is **not** — it is read
+   at runtime with `sys.env("GCLOUD_RW_API_KEY")`.
 
 2. **Data-plane (`GCLOUD_RW_API_KEY`).** The pipeline that Fleet Management
    *delivers* writes metrics/logs to Grafana Cloud. That delivered config reads
    its write credential from the environment via `sys.env("GCLOUD_RW_API_KEY")`.
-   We supply it through the systemd env file — **not** through `config.alloy`.
+
+Both read the same env var, supplied through the systemd env file — so **no
+token is ever written to `config.alloy`**. The env file is the one place the
+credential lands on disk, and the playbook locks it to `0600`.
 
 If the config-plane token is wrong, the host can't fetch config at all. If the
 data-plane key is wrong or missing, the host fetches config fine but every
@@ -75,7 +79,7 @@ and manages the `alloy` systemd service.
 
 | Path | Purpose |
 |------|---------|
-| `/etc/alloy/config.alloy` | The bootstrap config (logging + `remotecfg`). |
+| `/etc/alloy/config.alloy` | The bootstrap config (logging + `remotecfg`). Contains no credentials. |
 | `/etc/sysconfig/alloy` (RHEL) / `/etc/default/alloy` (Ubuntu) | systemd `EnvironmentFile`; carries `GCLOUD_RW_API_KEY`. |
 | `alloy.service` | systemd unit shipped by the package. |
 
