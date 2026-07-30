@@ -57,8 +57,9 @@ The access token is sensitive and should be rotated if it is ever exposed
    ```bash
    ansible-vault edit group_vars/alloy_nodes/vault.yml
    ```
-4. Re-run the playbook so both the `remotecfg` block and `GCLOUD_RW_API_KEY` on
-   every host are refreshed.
+4. Re-run the playbook. Only the env file changes — `config.alloy` holds no
+   token — and the role's handler restarts Alloy so both planes pick up the new
+   `GCLOUD_RW_API_KEY`.
 
 ## Verify a host
 

@@ -19,9 +19,10 @@ Ansible Vault, a distro-aware Python interpreter, low-memory handling, and the
   their full pipeline centrally — the on-host config stays a few lines.
 - **RHEL 8/9 and Ubuntu (incl. 18.04).** One playbook, one run, mixed fleet.
 - **Secrets in Ansible Vault.** No plaintext tokens in the repo.
-- **Remote_write credentials via the systemd env file.** `GCLOUD_RW_API_KEY`
-  is delivered through `/etc/default/alloy` (or `/etc/sysconfig/alloy`) and
-  locked down to `0600`.
+- **No credentials in `config.alloy`.** The token is delivered once through the
+  systemd env file (`/etc/default/alloy` or `/etc/sysconfig/alloy`, locked to
+  `0600`) as `GCLOUD_RW_API_KEY`, and read back with `sys.env()` by both the
+  `remotecfg` basic_auth and the Fleet-Management-delivered remote_write.
 - **Low-memory safe.** Auto-provisions swap on small instances so the package
   install doesn't get OOM-killed.
 
